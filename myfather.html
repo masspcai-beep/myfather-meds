@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>متابعة أدوية الوالد</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- استدعاء مكتبة Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Tajawal', sans-serif; background-color: #f8fafc; }
+        .late-pulse { animation: pulse-red 2s infinite; }
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        /* تصميم قائمة التحقق (Checklist) */
+        .med-checklist li::before { content: '💊'; margin-left: 8px; font-size: 14px; }
+    </style>
+</head>
+<body class="p-4 md:p-8 max-w-md mx-auto">
+
+    <!-- الترويسة -->
+    <header class="flex justify-between items-center mb-8 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+        <div>
+            <h1 class="text-xl font-bold text-gray-800 mb-1">💊 متابعة أدوية الوالد</h1>
+            <p class="text-gray-500 text-xs" id="current-date"></p>
+        </div>
+        <button onclick="goToAdmin()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+            ⚙️ الإدارة
+        </button>
+    </header>
+
+    <!-- شريط التنقل بين الأيام -->
+    <div class="flex justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-gray-100 mb-6">
+        <button onclick="changeDate(-1)" class="px-3 py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg text-sm font-bold border border-gray-200 transition">
+            ▶️ اليوم السابق
+        </button>
+        <button onclick="goToToday()" class="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold hover:bg-blue-100 transition">
+            العودة لليوم
+        </button>
+        <button onclick="changeDate(1)" class="px-3 py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg text-sm font-bold border border-gray-200 transition">
+            اليوم التالي ◀️
+        </button>
+    </div>
+
+    <!-- اختيار المستخدم -->
+    <div class="mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+        <label class="block text-sm font-medium text-gray-700 mb-2">من يقوم بإعطاء الجرعة الآن؟</label>
+        <select id="caregiver-name" class="w-full border-gray-300 rounded-lg shadow-sm p-2 bg-gray-50 focus:ring-blue-500 focus:border-blue-500">
+            <option value="">-- جاري تحميل الأسماء... --</option>
+        </select>
+    </div>
+
+    <!-- صندوق الملاحظات العامة -->
+    <div id="alert-box" class="hidden mb-6 bg-yellow-50 border-r-4 border-yellow-400 p-4 rounded-l-lg shadow-sm">
+        <div class="flex">
+            <div class="flex-shrink-0"><span class="text-yellow-400 text-xl">⚠️</span></div>
+            <div class="mr-3">
+                <h3 class="text-sm font-medium text-yellow-800">تنبيه عام من المشرف:</h3>
+                <p class="text-sm text-yellow-700 mt-1" id="alert-message"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- حاوية الجرعات الديناميكية -->
+    <div id="doses-container" class="space-y-6">
+        <div class="text-center text-gray-500 py-8 bg-white rounded-xl shadow-sm border border-gray-100">جاري تحميل الجرعات وقوائم الأدوية...</div>
+    </div>
+
+    <script>
+        // 1. الإعدادات والربط بقاعدة البيانات
+        const SUPABASE_URL = 'https://avpzyalrnngzmfxfppus.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF2cHp5YWxybm5nem1meGZwcHVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ2MTg4NTAsImV4cCI6MjEwMDE5NDg1MH0.C_b-fZNFS4vqV3HV4aYT8k8Nenzu0OvUaVg_zJVISz4';
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // ================= كود التقويم والتاريخ =================
+        let viewedDate = new Date();
+
+        function updateDateDisplay() {
+            document.getElementById('current-date').textContent = viewedDate.toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        }
+        
+        function changeDate(days) {
+            viewedDate.setDate(viewedDate.getDate() + days);
+            updateDateDisplay();
+            document.getElementById('doses-container').innerHTML = '<div class="text-center text-gray-500 py-8">جاري تحميل الجرعات...</div>';
+            loadTodayData();
+        }
+
+        function goToToday() {
+            viewedDate = new Date();
+            updateDateDisplay();
+            document.getElementById('doses-container').innerHTML = '<div class="text-center text-gray-500 py-8">جاري تحميل الجرعات...</div>';
+            loadTodayData();
+        }
+        
+        updateDateDisplay(); // تشغيل العرض عند فتح الصفحة
+        // ========================================================
+
+        // متغيرات البيانات الشاملة
+        let activeSchedules = [];
+        let todayLogs = {};
+        let doseCompositions = []; 
+
+        async function initPage() {
+            await loadCaregivers();
+            await loadGlobalNote();
+            await loadTodayData();
+            setupRealtimeSubscription();
+            setInterval(checkLateDoses, 60000); // الفحص مستمر كل دقيقة
+        }
+
+        async function loadCaregivers() {
+            const select = document.getElementById('caregiver-name');
+            const { data } = await db.from('caregivers').select('*');
+            if (data) {
+                select.innerHTML = '<option value="">-- اختر اسمك من القائمة --</option>';
+                data.forEach(c => select.innerHTML += `<option value="${c.id}">${c.name}</option>`);
+            }
+        }
+
+        async function loadGlobalNote() {
+            const { data } = await db.from('app_settings').select('value').eq('key', 'global_note').single();
+            if (data && data.value && data.value !== 'لا توجد ملاحظات حالياً') {
+                document.getElementById('alert-box').classList.remove('hidden');
+                document.getElementById('alert-message').textContent = data.value;
+            }
+        }
+
+        // جلب البيانات ودمج العلاقات المعقدة
+        async function loadTodayData() {
+            // قراءة التاريخ بناءً على اختيار المستخدم من التقويم
+            const offset = viewedDate.getTimezoneOffset();
+            const today = new Date(viewedDate.getTime() - (offset*60*1000)).toISOString().split('T')[0];
+
+            // جلب المواعيد المفعلة
+            const { data: schedules } = await db.from('doses_schedule').select('*').eq('is_active', true).order('scheduled_time', { ascending: true });
+            activeSchedules = schedules || [];
+
+            // جلب مكونات الجرعات (الأدوية المرتبطة)
+            const { data: comps } = await db.from('dose_medications').select(`
+                schedule_id, 
+                quantity, 
+                medications (id, name, unit, current_stock, threshold)
+            `);
+            doseCompositions = comps || [];
+
+            // جلب سجلات اليوم المختار
+            const { data: logs } = await db.from('medication_logs').select('*, caregivers(name)').eq('dose_date', today);
+
+            // إنشاء سجلات للجرعات الجديدة إن لم تكن موجودة
+            for (let sch of activeSchedules) {
+                let log = logs?.find(l => l.schedule_id === sch.id);
+                if (!log) {
+                    const newLog = {
+                        schedule_id: sch.id,
+                        dose_type: sch.dose_name,
+                        scheduled_time: sch.scheduled_time.substring(0,5),
+                        status: 'pending',
+                        dose_date: today
+                    };
+                    const { data: inserted } = await db.from('medication_logs').insert([newLog]).select('*, caregivers(name)').single();
+                    if(inserted) todayLogs[sch.id] = inserted;
+                } else {
+                    todayLogs[sch.id] = log;
+                }
+            }
+
+            renderDoses();
+            checkLateDoses();
+        }
+
+        // رسم الواجهة وبناء قائمة التحقق للأدوية
+        function renderDoses() {
+            const container = document.getElementById('doses-container');
+            container.innerHTML = '';
+
+            if (activeSchedules.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-500 py-8 bg-white rounded-xl shadow-sm border border-gray-100">لا توجد جرعات مجدولة لليوم. تأكد من إضافتها وتفعيلها من لوحة الإدارة.</div>';
+                return;
+            }
+
+            activeSchedules.forEach(sch => {
+                const log = todayLogs[sch.id];
+                if (!log) return;
+
+                const isTaken = log.status === 'taken';
+                const timeStr = formatTime(sch.scheduled_time);
+                
+                // تجميع الأدوية الخاصة بهذه الجرعة
+                const medsList = doseCompositions.filter(c => c.schedule_id === sch.id);
+                let checklistHTML = '';
+                
+                if (medsList.length > 0) {
+                    checklistHTML = '<ul class="med-checklist text-sm text-gray-700 bg-blue-50 border border-blue-100 p-3 rounded-lg mb-4 space-y-2">';
+                    medsList.forEach(m => {
+                        const medDetails = m.medications;
+                        checklistHTML += `<li class="flex items-center"><span class="font-bold text-blue-900">${medDetails.name}</span> <span class="mx-2 text-gray-400">|</span> <span>الكمية: ${m.quantity} ${medDetails.unit}</span></li>`;
+                    });
+                    checklistHTML += '</ul>';
+                } else {
+                    checklistHTML = '<p class="text-xs text-gray-400 italic mb-4">⚠️ لا يوجد أدوية مخصصة لهذه الجرعة. (أضفها من الإدارة)</p>';
+                }
+                
+                const html = `
+                <div id="card-${sch.id}" class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 transition duration-300 relative overflow-hidden mb-6">
+                    <div id="status-bar-${sch.id}" class="absolute right-0 top-0 bottom-0 w-2 ${isTaken ? 'bg-green-500' : 'bg-gray-300'}"></div>
+                    
+                    <div class="flex justify-between items-center mb-4 pr-3">
+                        <div>
+                            <h2 class="text-lg font-bold text-gray-800">${sch.dose_name}</h2>
+                            <p class="text-sm text-gray-500">الموعد: ${timeStr}</p>
+                        </div>
+                        <span id="badge-${sch.id}" class="px-3 py-1 rounded-full text-xs font-medium ${isTaken ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}">
+                            ${isTaken ? 'تم الإعطاء ✅' : 'بانتظار الموعد'}
+                        </span>
+                    </div>
+
+                    <div id="action-area-${sch.id}" class="${isTaken ? 'hidden' : 'pr-3'}">
+                        
+                        <!-- قائمة التحقق للأدوية المطلوبة -->
+                        <div class="mb-2 text-xs font-bold text-gray-500 uppercase tracking-wide">الرجاء تجهيز الأدوية التالية:</div>
+                        ${checklistHTML}
+
+                        <!-- خيار إرسال الواتساب -->
+                        <div class="flex items-center gap-2 mb-3 bg-blue-50 p-2 rounded-lg border border-blue-100">
+                            <input type="checkbox" id="send-wa-${sch.id}" checked class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer">
+                            <label for="send-wa-${sch.id}" class="text-sm font-bold text-blue-800 cursor-pointer">إرسال إشعار لقروب الواتساب</label>
+                        </div>
+
+                        <textarea id="note-${sch.id}" rows="2" class="w-full text-sm border border-gray-200 rounded-lg p-2 mb-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="إضافة ملاحظة للجرعة القادمة (اختياري)..."></textarea>
+                        <button onclick="recordDose('${sch.id}')" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition duration-200 flex justify-center items-center">
+                            تسجيل إعطاء الجرعة
+                        </button>
+                    </div>
+
+                    <div id="success-${sch.id}" class="${isTaken ? '' : 'hidden'} pr-3 text-sm text-green-700 bg-green-50 p-3 rounded-lg border border-green-100">
+                        ${isTaken ? `<strong>قام بالإعطاء:</strong> ${log.caregivers?.name || 'مسؤول'} <br> <strong>الوقت:</strong> ${new Date(log.given_at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}` : ''}
+                    </div>
+                </div>`;
+                container.innerHTML += html;
+            });
+        }
+
+        function formatTime(timeStr) {
+            let [h, m] = timeStr.split(':');
+            let d = new Date(); d.setHours(h, m, 0);
+            return d.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // فحص التأخير (النسخة المصححة)
+        function checkLateDoses() {
+            const now = new Date();
+            activeSchedules.forEach(sch => {
+                const log = todayLogs[sch.id];
+                if(log && log.status === 'pending') {
+                    let [h, m] = sch.scheduled_time.split(':');
+                    
+                    // التعديل الجذري: نعتمد على (التاريخ المعروض) وليس تاريخ اليوم
+                    let schTime = new Date(viewedDate); 
+                    schTime.setHours(parseInt(h), parseInt(m), 0, 0);
+                    schTime.setMinutes(schTime.getMinutes() + 30); // 30 دقيقة سماح
+                    
+                    // إذا كان الوقت الحالي (now) أكبر من وقت الجرعة المجدولة
+                    if(now > schTime) {
+                        markAsLate(sch.id);
+                    }
+                }
+            });
+        }
+
+        function markAsLate(schId) {
+            const card = document.getElementById(`card-${schId}`);
+            if(!card) return;
+            card.classList.add('late-pulse', 'border-red-300');
+            document.getElementById(`status-bar-${schId}`).classList.replace('bg-gray-300', 'bg-red-500');
+            const badge = document.getElementById(`badge-${schId}`);
+            badge.textContent = 'الجرعة متأخرة ⚠️';
+            badge.className = "px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800";
+        }
+
+        // تسجيل الجرعة وخصم الأرصدة (محرك الخصم)
+        async function recordDose(schId) {
+            const caregiverSelect = document.getElementById('caregiver-name');
+            const caregiverId = caregiverSelect.value;
+            const caregiverName = caregiverSelect.options[caregiverSelect.selectedIndex]?.text;
+            
+            if(!caregiverId) return alert("الرجاء اختيار اسمك من القائمة العلوية أولاً.");
+
+            const log = todayLogs[schId];
+            const sch = activeSchedules.find(s => s.id === schId);
+            const note = document.getElementById(`note-${schId}`).value;
+            
+            const btn = event.target;
+            const originalText = btn.innerText;
+            btn.innerText = "جاري التسجيل والخصم..."; btn.disabled = true;
+
+            const nowISO = new Date().toISOString();
+
+            // 1. تحديث حالة الجرعة كـ "مأخوذة"
+            const { error: logError } = await db.from('medication_logs')
+                .update({ status: 'taken', given_by: caregiverId, given_at: nowISO, note_for_next_dose: note })
+                .eq('id', log.id);
+
+            if (logError) {
+                alert("حدث خطأ أثناء التسجيل."); btn.innerText = originalText; btn.disabled = false; return;
+            }
+
+            // 2. خصم المخزون لكل دواء مخصص في هذه الجرعة
+            const medsList = doseCompositions.filter(c => c.schedule_id === schId);
+            let stockWarnings = [];
+
+            for (const item of medsList) {
+                const med = item.medications;
+                if (med) {
+                    // جلب الرصيد الأحدث لضمان الدقة
+                    const { data: latestMed } = await db.from('medications').select('current_stock').eq('id', med.id).single();
+                    const currentStock = latestMed ? latestMed.current_stock : med.current_stock;
+                    
+                    const newStock = currentStock - item.quantity;
+                    
+                    // تحديث رصيد الدواء في قاعدة البيانات
+                    await db.from('medications').update({ current_stock: newStock }).eq('id', med.id);
+                    
+                    // إذا نزل الرصيد عن الحد الأدنى، أضف رسالة تحذير
+                    if (newStock <= med.threshold) {
+                        stockWarnings.push(`⚠️ الصنف "${med.name}" منخفض! (المتبقي: ${newStock} ${med.unit})`);
+                    }
+                }
+            }
+
+            // 3. تحديث واجهة المستخدم
+            const timeStr = new Date(nowISO).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
+            updateUIForSuccess(schId, caregiverName, timeStr);
+            todayLogs[schId].status = 'taken';
+            todayLogs[schId].given_at = nowISO;
+            todayLogs[schId].caregivers = { name: caregiverName };
+
+            // 4. قراءة حالة مربع الاختيار وإرسال الواتساب
+            const shouldSendWa = document.getElementById(`send-wa-${schId}`).checked;
+            
+            if (shouldSendWa) {
+                const finalWarnings = stockWarnings.length > 0 ? '\n\nتنبيهات المخزون:\n' + stockWarnings.join('\n') : '';
+                sendWhatsAppNotification(sch.dose_name, caregiverName, timeStr, note, finalWarnings);
+            }
+        }
+
+        function updateUIForSuccess(schId, caregiverName, time) {
+            document.getElementById(`card-${schId}`).classList.remove('late-pulse', 'border-red-300');
+            document.getElementById(`action-area-${schId}`).classList.add('hidden');
+            
+            const statusBar = document.getElementById(`status-bar-${schId}`);
+            statusBar.classList.remove('bg-gray-300', 'bg-red-500');
+            statusBar.classList.add('bg-green-500');
+            
+            const badge = document.getElementById(`badge-${schId}`);
+            badge.textContent = 'تم الإعطاء ✅';
+            badge.className = "px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800";
+
+            const successDiv = document.getElementById(`success-${schId}`);
+            successDiv.innerHTML = `<strong>قام بالإعطاء:</strong> ${caregiverName} <br> <strong>الوقت:</strong> ${time}`;
+            successDiv.classList.remove('hidden');
+        }
+
+        // التحديث اللحظي لجميع الأجهزة المفتوحة
+        function setupRealtimeSubscription() {
+            db.channel('public:medication_logs').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'medication_logs' }, payload => {
+                const updated = payload.new;
+                const schId = updated.schedule_id;
+                if (todayLogs[schId] && updated.status === 'taken' && todayLogs[schId].status !== 'taken') {
+                    fetchCaregiverName(updated.given_by).then(name => {
+                        const timeStr = new Date(updated.given_at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
+                        updateUIForSuccess(schId, name, timeStr);
+                        todayLogs[schId].status = 'taken';
+                    });
+                }
+            }).subscribe();
+        }
+
+        async function fetchCaregiverName(id) {
+            if(!id) return 'أحد المسؤولين';
+            const { data } = await db.from('caregivers').select('name').eq('id', id).single();
+            return data ? data.name : 'أحد المسؤولين';
+        }
+
+        function sendWhatsAppNotification(doseName, caregiverName, time, note, stockWarnings) {
+            // 1. تجهيز نص الرسالة وتنسيقه
+            let message = `✅ تم إعطاء *${doseName}* لوالدي.\n👤 بواسطة: ${caregiverName}\n⏰ الوقت: ${time}`;
+            
+            if (note) {
+                message += `\n📝 ملاحظات: ${note}`;
+            }
+            
+            if (stockWarnings) {
+                message += stockWarnings; // دمج تحذيرات الأصناف الناقصة
+            }
+
+            // 2. تحويل النص ليكون متوافقاً مع روابط الويب (تشفير المسافات والرموز)
+            const encodedMessage = encodeURIComponent(message);
+
+            // 3. إنشاء رابط واتساب الشامل (بدون رقم محدد)
+            const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
+
+            // 4. فتح الواتساب في نافذة أو تطبيق جديد ليقوم المستخدم باختيار القروب
+            window.open(whatsappUrl, '_blank');
+        }
+
+        function goToAdmin() { window.location.href = 'admin.html'; }
+
+        initPage();
+    </script>
+</body>
+</html>
