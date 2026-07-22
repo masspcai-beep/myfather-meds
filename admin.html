@@ -279,27 +279,25 @@
 
         async function deleteMedication(id, name) {
             if(confirm(`هل أنت متأكد من حذف الدواء (${name}) من المستودع نهائياً؟\nسيتم حذفه من جميع الجرعات المرتبطة به!`)) {
+                // فك الارتباط من الجرعات والسجلات أولاً لمنع أخطاء القاعدة
+                await db.from('dose_medications').delete().eq('medication_id', id);
                 await db.from('medications').delete().eq('id', id);
                 loadMedications();
             }
         }
 
-        // ------------------ 3. الجرعات ومكوناتها (الجديد كلياً) ------------------
+        // ------------------ 3. الجرعات ومكوناتها ------------------
         async function loadSchedulesAndCompositions() {
-            await fetchGlobalMedications(); // لتجهيز قائمة الإضافة
+            await fetchGlobalMedications(); 
             const container = document.getElementById('schedules-container');
             container.innerHTML = '<p class="text-gray-500">جاري التحميل...</p>';
 
-            // جلب المواعيد
             const { data: schedules } = await db.from('doses_schedule').select('*').order('scheduled_time', { ascending: true });
-            
-            // جلب المكونات (مهم: جلبها منفصلة ثم دمجها برمجياً لضمان عدم حدوث أخطاء استعلام)
             const { data: compositions } = await db.from('dose_medications').select('id, schedule_id, quantity, medications(name, unit)');
 
             container.innerHTML = '';
             if(!schedules || schedules.length === 0) return container.innerHTML = '<p class="text-gray-500">لا يوجد جرعات مجدولة.</p>';
 
-            // بناء خيارات قائمة الأدوية (للإضافة)
             let medOptionsHTML = '<option value="">-- اختر الدواء --</option>';
             globalMedications.forEach(m => medOptionsHTML += `<option value="${m.id}">${m.name} (${m.unit})</option>`);
 
@@ -308,17 +306,16 @@
                 const activeBtn = sch.is_active ? `<button onclick="toggleDose('${sch.id}', true)" class="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">إيقاف مؤقت</button>` 
                                                 : `<button onclick="toggleDose('${sch.id}', false)" class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">تفعيل</button>`;
                 
-                // البحث عن أدوية هذه الجرعة المحددة
                 const schMeds = compositions ? compositions.filter(c => c.schedule_id === sch.id) : [];
                 let medsHTML = '';
                 
                 if(schMeds.length === 0) {
-                    medsHTML = '<li class="text-xs text-gray-400 italic py-2">لا يوجد أدوية مضافة لهذه الجرعة بعد. ستظهر كجرعة فارغة!</li>';
+                    medsHTML = '<li class="text-xs text-gray-400 italic py-2">لا يوجد أدوية مضافة لهذه الجرعة بعد.</li>';
                 } else {
                     schMeds.forEach(c => {
                         medsHTML += `
                             <li class="flex justify-between items-center py-2 border-b border-dashed border-gray-200 last:border-0">
-                                <span class="text-sm font-medium text-gray-700">💊 ${c.medications.name} <span class="text-gray-500 ml-1 text-xs">(${c.quantity} ${c.medications.unit})</span></span>
+                                <span class="text-sm font-medium text-gray-700">💊 ${c.medications?.name || 'دواء'} <span class="text-gray-500 ml-1 text-xs">(${c.quantity} ${c.medications?.unit || ''})</span></span>
                                 <button onclick="removeMedFromDose('${c.id}')" class="text-red-500 hover:text-red-700 text-xs">❌ حذف</button>
                             </li>`;
                     });
@@ -341,7 +338,6 @@
                         ${medsHTML}
                     </ul>
 
-                    <!-- نموذج إضافة دواء لهذه الجرعة -->
                     <div class="flex gap-2">
                         <select id="select-med-${sch.id}" class="w-1/2 border border-gray-300 rounded p-2 text-xs focus:outline-none">
                             ${medOptionsHTML}
@@ -363,7 +359,16 @@
         }
 
         async function toggleDose(id, isActive) { await db.from('doses_schedule').update({ is_active: !isActive }).eq('id', id); loadSchedulesAndCompositions(); }
-        async function deleteDoseSchedule(id) { if(confirm('حذف الموعد بالكامل؟')) { await db.from('doses_schedule').delete().eq('id', id); loadSchedulesAndCompositions(); } }
+        
+        // دالة الحذف المحسنة والمعدلة لتنظيف الجرعات التجريبية تماماً
+        async function deleteDoseSchedule(id) { 
+            if(confirm('هل أنت متأكد من حذف الموعد بالكامل؟ (سيتم حذف كل السجلات والمكونات المرتبطة به)')) { 
+                await db.from('dose_medications').delete().eq('schedule_id', id);
+                await db.from('medication_logs').delete().eq('schedule_id', id);
+                await db.from('doses_schedule').delete().eq('id', id); 
+                loadSchedulesAndCompositions(); 
+            } 
+        }
 
         async function addMedToDose(scheduleId) {
             const medId = document.getElementById(`select-med-${scheduleId}`).value;
