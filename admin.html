@@ -65,20 +65,30 @@
         </div>
     </div>
 
-    <!-- ================= 2. التبويب الثاني: مستودع الأدوية ================= -->
+    <!-- ================= 2. التبويب الثاني: مستودع الأدوية (المعدل بالدليل الذكي) ================= -->
     <div id="tab-meds" class="tab-content hidden bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
         <h2 class="text-lg font-bold text-gray-800 mb-4">📦 إضافة وتحديث المخزون الطبي</h2>
         
-        <!-- نموذج إضافة دواء جديد -->
-        <div class="flex flex-wrap md:flex-nowrap gap-3 mb-6 bg-gray-50 p-4 rounded-xl border border-gray-200">
-            <input type="text" id="med-name" class="flex-grow border border-gray-300 rounded-lg p-2 text-sm" placeholder="اسم الدواء أو اللزقة...">
-            <select id="med-unit" class="w-full md:w-1/5 border border-gray-300 rounded-lg p-2 text-sm">
-                <option value="حبة">حبة</option><option value="لزقة">لزقة</option>
-                <option value="كبسولة">كبسولة</option><option value="مل">مل</option>
+        <!-- نموذج إضافة دواء جديد (ذكي) -->
+        <div class="flex flex-col gap-3 mb-6 bg-gray-50 p-5 rounded-xl border border-gray-200">
+            <label class="text-sm font-bold text-gray-700">اختر دواء من الدليل المعتمد للوالد، أو أضف دواء مخصص:</label>
+            <select id="preset-med" onchange="toggleCustomMedInput()" class="w-full border border-gray-300 rounded-lg p-2 text-sm bg-white focus:outline-none focus:border-blue-500 shadow-sm">
+                <!-- سيتم تعبئة الأدوية من الجافاسكربت -->
             </select>
-            <input type="number" id="med-stock" class="w-full md:w-1/5 border border-gray-300 rounded-lg p-2 text-sm" placeholder="الرصيد الافتتاحي">
-            <input type="number" id="med-thresh" class="w-full md:w-1/5 border border-gray-300 rounded-lg p-2 text-sm" placeholder="تنبيه النقص عند" value="10">
-            <button onclick="addMedication()" class="w-full md:w-auto bg-green-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-green-700 font-bold transition">إضافة للصيدلية</button>
+            
+            <div class="flex flex-wrap md:flex-nowrap gap-3 mt-2">
+                <input type="text" id="med-name" class="flex-grow border border-gray-300 rounded-lg p-2 text-sm hidden" placeholder="اكتب اسم الدواء الجديد هنا...">
+                <select id="med-unit" class="w-full md:w-1/5 border border-gray-300 rounded-lg p-2 text-sm">
+                    <option value="حبة">حبة</option>
+                    <option value="كبسولة">كبسولة</option>
+                    <option value="لزقة">لزقة</option>
+                    <option value="ظرف">ظرف</option>
+                    <option value="مل">مل</option>
+                </select>
+                <input type="number" id="med-stock" class="w-full md:w-1/5 border border-gray-300 rounded-lg p-2 text-sm" placeholder="الرصيد الافتتاحي">
+                <input type="number" id="med-thresh" class="w-full md:w-1/5 border border-gray-300 rounded-lg p-2 text-sm" placeholder="تنبيه النقص عند" value="10">
+                <button onclick="addMedication()" class="w-full md:w-auto bg-green-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-green-700 font-bold transition shadow-sm">إضافة للصيدلية</button>
+            </div>
         </div>
 
         <!-- قائمة الأدوية (المستودع) -->
@@ -123,16 +133,17 @@
     <!-- ================= 4. التبويب الرابع: التقارير ================= -->
     <div id="tab-reports" class="tab-content hidden bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
         <div class="flex justify-between items-center mb-4">
-            <h2 class="text-lg font-bold text-gray-800">📊 سجل إعطاء الجرعات (آخر 50 حركة)</h2>
-            <button onclick="loadReports()" class="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded text-gray-700">🔄 تحديث</button>
+            <h2 class="text-lg font-bold text-gray-800">📊 سجل إعطاء الجرعات (مع ميزة التراجع وإعادة الرصيد)</h2>
+            <button onclick="loadReports()" class="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded text-gray-700 font-bold">🔄 تحديث</button>
         </div>
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">التاريخ والوقت المجدول</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الجرعة</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الحالة والمسؤول</th>
+                        <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">التاريخ والوقت</th>
+                        <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">الجرعة</th>
+                        <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">الحالة والمسؤول</th>
+                        <th class="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase">تراجع</th>
                     </tr>
                 </thead>
                 <tbody id="reports-table-body" class="bg-white divide-y divide-gray-200 text-sm"></tbody>
@@ -145,7 +156,59 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF2cHp5YWxybm5nem1meGZwcHVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ2MTg4NTAsImV4cCI6MjEwMDE5NDg1MH0.C_b-fZNFS4vqV3HV4aYT8k8Nenzu0OvUaVg_zJVISz4';
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let globalMedications = []; // متغير عالمي للاحتفاظ بقائمة الأدوية لاستخدامها في القوائم المنسدلة
+        let globalMedications = [];
+
+        // --- دليل الأدوية الجاهز (حسب المرفق الطبي) ---
+        const PREDEFINED_MEDS = [
+            { name: "Nexium 40 mg - نيكسيوم", unit: "كبسولة" },
+            { name: "Diamicron MR 30 mg - دياميكرون", unit: "حبة" },
+            { name: "Thiotacid 300 mg - ثيوتاسيد", unit: "حبة" },
+            { name: "Lamictal (50mg+25mg) - لامكتال", unit: "حبة" },
+            { name: "Dementile 10 mg - دمنتيل", unit: "حبة" },
+            { name: "Formit XR 750 mg - فورميت", unit: "حبة" },
+            { name: "Duodart - ديودارت", unit: "كبسولة" },
+            { name: "Aspirin 100 mg - أسبرين", unit: "حبة" },
+            { name: "Atorvastatin 40 mg - أتورفاستاتين", unit: "حبة" },
+            { name: "Neurovit - نيوروفيت", unit: "حبة" },
+            { name: "Ginkgo biloba - جنكو بيلوبا", unit: "حبة" },
+            { name: "MegaMind - ميجا مايند", unit: "حبة" },
+            { name: "Centrum Silver - سنتروم", unit: "حبة" },
+            { name: "Coenzyme Q10 - CoQ10", unit: "كبسولة" },
+            { name: "Vitamin D 50,000 - فيتامين دال", unit: "كبسولة" },
+            { name: "Rivastigmine Patch - لصقة ريفاستيجمين", unit: "لزقة" },
+            { name: "Movicol Powder - موفيكول ملين", unit: "ظرف" }
+        ];
+
+        // تعبئة قائمة الدليل الذكي عند فتح الصفحة
+        function populatePresetMeds() {
+            const select = document.getElementById('preset-med');
+            select.innerHTML = '<option value="">-- اضغط هنا لاختيار دواء من دليل الوالد --</option>';
+            PREDEFINED_MEDS.forEach((med, index) => {
+                select.innerHTML += `<option value="${index}">${med.name}</option>`;
+            });
+            select.innerHTML += '<option value="custom" class="font-bold text-blue-600">➕ إضافة دواء غير موجود في القائمة (يدوي)</option>';
+        }
+
+        // إظهار/إخفاء الحقل اليدوي وتحديث الوحدة التلقائية
+        function toggleCustomMedInput() {
+            const select = document.getElementById('preset-med');
+            const nameInput = document.getElementById('med-name');
+            const unitSelect = document.getElementById('med-unit');
+            
+            if (select.value === 'custom') {
+                nameInput.classList.remove('hidden');
+                nameInput.value = '';
+                unitSelect.value = 'حبة';
+            } else if (select.value !== '') {
+                nameInput.classList.add('hidden');
+                const selectedMed = PREDEFINED_MEDS[select.value];
+                nameInput.value = selectedMed.name;
+                unitSelect.value = selectedMed.unit;
+            } else {
+                nameInput.classList.add('hidden');
+                nameInput.value = '';
+            }
+        }
 
         // التنقل بين التبويبات
         function switchTab(tabId) {
@@ -159,7 +222,7 @@
             activeBtn.classList.remove('border-transparent', 'text-gray-500', 'font-medium');
             activeBtn.classList.add('border-blue-600', 'text-blue-600', 'font-bold');
 
-            if(tabId === 'tab-meds') loadMedications();
+            if(tabId === 'tab-meds') { loadMedications(); populatePresetMeds(); }
             if(tabId === 'tab-doses') loadSchedulesAndCompositions();
             if(tabId === 'tab-reports') loadReports();
         }
@@ -174,7 +237,7 @@
                 
                 await loadCaregivers();
                 await loadGlobalNote();
-                await fetchGlobalMedications(); // جلب الأدوية مبكراً لاستخدامها
+                await fetchGlobalMedications();
             } else {
                 document.getElementById('login-overlay').classList.remove('hidden');
                 const select = document.getElementById('login-admin-select');
@@ -260,15 +323,20 @@
             const unit = document.getElementById('med-unit').value;
             const stock = parseFloat(document.getElementById('med-stock').value) || 0;
             const thresh = parseFloat(document.getElementById('med-thresh').value) || 10;
-            if(!name) return alert("الرجاء كتابة اسم الدواء");
+            if(!name) return alert("الرجاء اختيار أو كتابة اسم الدواء");
 
             await db.from('medications').insert([{ name: name, unit: unit, current_stock: stock, threshold: thresh }]);
-            document.getElementById('med-name').value = ''; document.getElementById('med-stock').value = '';
+            
+            document.getElementById('preset-med').value = '';
+            document.getElementById('med-name').value = '';
+            document.getElementById('med-name').classList.add('hidden');
+            document.getElementById('med-stock').value = '';
+            
             loadMedications();
         }
 
         async function updateMedStock(id, name, currentStock) {
-            const addStr = prompt(`الرصيد الحالي لـ (${name}) هو ${currentStock}.\nكم حبة/وحدة تريد أن تضيف للرصيد؟`);
+            const addStr = prompt(`الرصيد الحالي لـ (${name}) هو ${currentStock}.\nكم تريد أن تضيف للرصيد؟`);
             if(!addStr) return;
             const addQty = parseFloat(addStr);
             if(isNaN(addQty)) return alert("الرجاء إدخال رقم صحيح");
@@ -279,7 +347,6 @@
 
         async function deleteMedication(id, name) {
             if(confirm(`هل أنت متأكد من حذف الدواء (${name}) من المستودع نهائياً؟\nسيتم حذفه من جميع الجرعات المرتبطة به!`)) {
-                // فك الارتباط من الجرعات والسجلات أولاً لمنع أخطاء القاعدة
                 await db.from('dose_medications').delete().eq('medication_id', id);
                 await db.from('medications').delete().eq('id', id);
                 loadMedications();
@@ -298,7 +365,7 @@
             container.innerHTML = '';
             if(!schedules || schedules.length === 0) return container.innerHTML = '<p class="text-gray-500">لا يوجد جرعات مجدولة.</p>';
 
-            let medOptionsHTML = '<option value="">-- اختر الدواء --</option>';
+            let medOptionsHTML = '<option value="">-- اختر الدواء من المستودع --</option>';
             globalMedications.forEach(m => medOptionsHTML += `<option value="${m.id}">${m.name} (${m.unit})</option>`);
 
             schedules.forEach(sch => {
@@ -315,7 +382,7 @@
                     schMeds.forEach(c => {
                         medsHTML += `
                             <li class="flex justify-between items-center py-2 border-b border-dashed border-gray-200 last:border-0">
-                                <span class="text-sm font-medium text-gray-700">💊 ${c.medications?.name || 'دواء'} <span class="text-gray-500 ml-1 text-xs">(${c.quantity} ${c.medications?.unit || ''})</span></span>
+                                <span class="text-sm font-medium text-gray-700">💊 ${c.medications?.name || 'دواء غير معروف'} <span class="text-gray-500 ml-1 text-xs">(${c.quantity} ${c.medications?.unit || ''})</span></span>
                                 <button onclick="removeMedFromDose('${c.id}')" class="text-red-500 hover:text-red-700 text-xs">❌ حذف</button>
                             </li>`;
                     });
@@ -360,7 +427,6 @@
 
         async function toggleDose(id, isActive) { await db.from('doses_schedule').update({ is_active: !isActive }).eq('id', id); loadSchedulesAndCompositions(); }
         
-        // دالة الحذف المحسنة والمعدلة لتنظيف الجرعات التجريبية تماماً
         async function deleteDoseSchedule(id) { 
             if(confirm('هل أنت متأكد من حذف الموعد بالكامل؟ (سيتم حذف كل السجلات والمكونات المرتبطة به)')) { 
                 await db.from('dose_medications').delete().eq('schedule_id', id);
@@ -384,29 +450,64 @@
             loadSchedulesAndCompositions();
         }
 
-        // ------------------ 4. التقارير ------------------
+        // ------------------ 4. التقارير وإلغاء التسجيل ------------------
         async function loadReports() {
             const tbody = document.getElementById('reports-table-body');
-            tbody.innerHTML = '<tr><td colspan="3" class="px-6 py-4 text-center">جاري التحميل...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center">جاري التحميل...</td></tr>';
             
             const { data } = await db.from('medication_logs').select('*, caregivers(name)').order('dose_date', { ascending: false }).order('scheduled_time', { ascending: true }).limit(50);
             tbody.innerHTML = '';
-            if(!data || data.length === 0) return tbody.innerHTML = '<tr><td colspan="3" class="px-6 py-4 text-center">لا توجد سجلات</td></tr>';
+            if(!data || data.length === 0) return tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center">لا توجد سجلات</td></tr>';
 
             data.forEach(log => {
                 const isTaken = log.status === 'taken';
                 const timeGiven = isTaken && log.given_at ? new Date(log.given_at).toLocaleTimeString('ar-SA', {hour: '2-digit', minute:'2-digit'}) : '-';
+                
+                // زر التراجع
+                const revertBtnHTML = isTaken 
+                    ? `<button onclick="revertDose('${log.id}', '${log.schedule_id}')" class="text-xs bg-red-100 hover:bg-red-200 text-red-700 font-bold py-1 px-3 rounded transition shadow-sm border border-red-200">إلغاء وإعادة الرصيد</button>`
+                    : `<span class="text-xs text-gray-400">-</span>`;
+
                 tbody.innerHTML += `
                     <tr class="hover:bg-gray-50">
                         <td class="px-6 py-3 whitespace-nowrap"><div class="font-medium">${log.dose_date}</div><div class="text-gray-400 text-xs">الموعد: ${log.scheduled_time}</div></td>
                         <td class="px-6 py-3 whitespace-nowrap font-bold text-gray-700">${log.dose_type}</td>
                         <td class="px-6 py-3 whitespace-nowrap">
                             ${isTaken 
-                                ? `<span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-bold">تم بواسطة: ${log.caregivers?.name || 'مجهول'} (${timeGiven})</span>` 
-                                : '<span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-bold">لم تُعطى بعد</span>'}
+                                ? `<span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-bold">✅ تم بواسطة: ${log.caregivers?.name || 'مجهول'} (${timeGiven})</span>` 
+                                : '<span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-bold">بانتظار الموعد</span>'}
                         </td>
+                        <td class="px-6 py-3 text-center whitespace-nowrap">${revertBtnHTML}</td>
                     </tr>`;
             });
+        }
+
+        // دالة التراجع القوية (تعيد الأرصدة وتلغي التسجيل)
+        async function revertDose(logId, scheduleId) {
+            if(!confirm("⚠️ تنبيه هام!\nهل أنت متأكد من إلغاء تسجيل هذه الجرعة؟\n\n- سيتم إعادتها لحالة (بانتظار الموعد).\n- سيتم إرجاع كميات الأدوية المخصومة إلى رصيد المستودع.")) return;
+
+            // 1. جلب مكونات الجرعة لإرجاع الأرصدة
+            const { data: doseComps } = await db.from('dose_medications').select('medication_id, quantity').eq('schedule_id', scheduleId);
+            
+            if (doseComps && doseComps.length > 0) {
+                for (let comp of doseComps) {
+                    // جلب الرصيد الحالي للدواء
+                    const { data: medData } = await db.from('medications').select('current_stock').eq('id', comp.medication_id).single();
+                    if (medData) {
+                        // إعادة الكمية للرصيد
+                        const newStock = medData.current_stock + comp.quantity;
+                        await db.from('medications').update({ current_stock: newStock }).eq('id', comp.medication_id);
+                    }
+                }
+            }
+
+            // 2. تصفير السجل وإعادته لحالة الانتظار
+            await db.from('medication_logs')
+                .update({ status: 'pending', given_by: null, given_at: null, note_for_next_dose: null })
+                .eq('id', logId);
+
+            alert("تم التراجع عن الجرعة وإرجاع أرصدة الأدوية بنجاح.");
+            loadReports();
         }
 
         // تشغيل التحقق

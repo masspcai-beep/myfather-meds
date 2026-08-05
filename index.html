@@ -142,7 +142,6 @@
             }
         }
 
-        // حفظ المستخدم المختار وإخفاء النافذة
         function saveCaregiver() {
             const select = document.getElementById('welcome-caregiver-select');
             const id = select.value;
@@ -160,13 +159,11 @@
             loadTodayData();
         }
 
-        // عرض رسالة الترحيب
         function showGreeting(name) {
             document.getElementById('user-greeting').textContent = `أهلاً، ${name} 🌟`;
             document.getElementById('user-greeting-container').classList.remove('hidden');
         }
 
-        // تغيير المستخدم (تسجيل خروج من الواجهة)
         function changeCaregiver() {
             localStorage.removeItem('caregiverId');
             localStorage.removeItem('caregiverName');
@@ -182,9 +179,7 @@
             }
         }
 
-        // جلب البيانات ودمج العلاقات المعقدة
         async function loadTodayData() {
-            // منع التحميل إذا لم يتم تسجيل الدخول
             if (!localStorage.getItem('caregiverId')) return;
 
             const offset = viewedDate.getTimezoneOffset();
@@ -285,8 +280,11 @@
                         </button>
                     </div>
 
-                    <div id="success-${sch.id}" class="${isTaken ? '' : 'hidden'} pr-3 text-sm text-green-700 bg-green-50 p-3 rounded-lg border border-green-100">
-                        ${isTaken ? `<strong>قام بالإعطاء:</strong> ${log.caregivers?.name || 'مسؤول'} <br> <strong>الوقت:</strong> ${new Date(log.given_at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}` : ''}
+                    <!-- تم إضافة ميزة زر الواتساب الاحتياطي هنا -->
+                    <div id="success-${sch.id}" class="${isTaken ? '' : 'hidden'} pr-3 text-sm text-green-700 bg-green-50 p-4 rounded-lg border border-green-100">
+                        <strong>قام بالإعطاء:</strong> <span id="success-name-${sch.id}">${log.caregivers?.name || 'مسؤول'}</span> <br> 
+                        <strong>الوقت:</strong> <span id="success-time-${sch.id}">${isTaken && log.given_at ? new Date(log.given_at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                        <div id="fallback-wa-${sch.id}"></div>
                     </div>
                 </div>`;
                 container.innerHTML += html;
@@ -328,7 +326,6 @@
         }
 
         async function recordDose(schId) {
-            // قراءة اسم المستخدم المحفوظ من الذاكرة بدلاً من القائمة السابقة
             const caregiverId = localStorage.getItem('caregiverId');
             const caregiverName = localStorage.getItem('caregiverName');
             
@@ -374,20 +371,28 @@
             }
 
             const timeStr = new Date(nowISO).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
-            updateUIForSuccess(schId, caregiverName, timeStr);
+            
+            // تجهيز نص رسالة الواتساب وتوليد الرابط الذكي
+            let waMessage = `✅ تم إعطاء *${sch.dose_name}* لوالدي.\n👤 بواسطة: ${caregiverName}\n⏰ الوقت: ${timeStr}`;
+            if (note) waMessage += `\n📝 ملاحظات: ${note}`;
+            if (stockWarnings.length > 0) waMessage += '\n\nتنبيهات المخزون:\n' + stockWarnings.join('\n');
+            const waUrl = `https://wa.me/?text=${encodeURIComponent(waMessage)}`;
+
+            updateUIForSuccess(schId, caregiverName, timeStr, waUrl);
+            
             todayLogs[schId].status = 'taken';
             todayLogs[schId].given_at = nowISO;
             todayLogs[schId].caregivers = { name: caregiverName };
 
+            // محاولة الفتح التلقائي للواتساب
             const shouldSendWa = document.getElementById(`send-wa-${schId}`).checked;
-            
             if (shouldSendWa) {
-                const finalWarnings = stockWarnings.length > 0 ? '\n\nتنبيهات المخزون:\n' + stockWarnings.join('\n') : '';
-                sendWhatsAppNotification(sch.dose_name, caregiverName, timeStr, note, finalWarnings);
+                window.open(waUrl, '_blank');
             }
         }
 
-        function updateUIForSuccess(schId, caregiverName, time) {
+        // تم تحديث هذه الدالة لتقبل رابط الواتساب وتُنشئ الزر الاحتياطي
+        function updateUIForSuccess(schId, caregiverName, time, waUrl = '') {
             document.getElementById(`card-${schId}`).classList.remove('late-pulse', 'border-red-300');
             document.getElementById(`action-area-${schId}`).classList.add('hidden');
             
@@ -399,9 +404,22 @@
             badge.textContent = 'تم الإعطاء ✅';
             badge.className = "px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800";
 
-            const successDiv = document.getElementById(`success-${schId}`);
-            successDiv.innerHTML = `<strong>قام بالإعطاء:</strong> ${caregiverName} <br> <strong>الوقت:</strong> ${time}`;
-            successDiv.classList.remove('hidden');
+            document.getElementById(`success-name-${schId}`).textContent = caregiverName;
+            document.getElementById(`success-time-${schId}`).textContent = time;
+            
+            const fallbackDiv = document.getElementById(`fallback-wa-${schId}`);
+            if (waUrl && fallbackDiv) {
+                fallbackDiv.innerHTML = `
+                    <div class="mt-3 border-t border-green-200 pt-3">
+                        <button onclick="window.open('${waUrl}', '_blank')" class="flex items-center justify-center gap-2 w-full bg-white hover:bg-green-50 text-green-700 border border-green-300 py-2 rounded-lg text-sm font-bold transition shadow-sm">
+                            💬 إرسال رسالة التوثيق للقروب
+                        </button>
+                    </div>`;
+            } else if (fallbackDiv) {
+                fallbackDiv.innerHTML = '';
+            }
+
+            document.getElementById(`success-${schId}`).classList.remove('hidden');
         }
 
         function setupRealtimeSubscription() {
@@ -411,7 +429,7 @@
                 if (todayLogs[schId] && updated.status === 'taken' && todayLogs[schId].status !== 'taken') {
                     fetchCaregiverName(updated.given_by).then(name => {
                         const timeStr = new Date(updated.given_at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
-                        updateUIForSuccess(schId, name, timeStr);
+                        updateUIForSuccess(schId, name, timeStr); // التحديث اللحظي لا يُظهر زر الواتساب للآخرين
                         todayLogs[schId].status = 'taken';
                     });
                 }
@@ -422,22 +440,6 @@
             if(!id) return 'أحد المسؤولين';
             const { data } = await db.from('caregivers').select('name').eq('id', id).single();
             return data ? data.name : 'أحد المسؤولين';
-        }
-
-        function sendWhatsAppNotification(doseName, caregiverName, time, note, stockWarnings) {
-            let message = `✅ تم إعطاء *${doseName}* لوالدي.\n👤 بواسطة: ${caregiverName}\n⏰ الوقت: ${time}`;
-            
-            if (note) {
-                message += `\n📝 ملاحظات: ${note}`;
-            }
-            
-            if (stockWarnings) {
-                message += stockWarnings;
-            }
-
-            const encodedMessage = encodeURIComponent(message);
-            const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
-            window.open(whatsappUrl, '_blank');
         }
 
         function goToAdmin() { window.location.href = 'admin.html'; }
