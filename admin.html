@@ -65,15 +65,13 @@
         </div>
     </div>
 
-    <!-- ================= 2. التبويب الثاني: مستودع الأدوية (المعدل بالدليل الذكي) ================= -->
+    <!-- ================= 2. التبويب الثاني: مستودع الأدوية ================= -->
     <div id="tab-meds" class="tab-content hidden bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
         <h2 class="text-lg font-bold text-gray-800 mb-4">📦 إضافة وتحديث المخزون الطبي</h2>
         
-        <!-- نموذج إضافة دواء جديد (ذكي) -->
         <div class="flex flex-col gap-3 mb-6 bg-gray-50 p-5 rounded-xl border border-gray-200">
             <label class="text-sm font-bold text-gray-700">اختر دواء من الدليل المعتمد للوالد، أو أضف دواء مخصص:</label>
             <select id="preset-med" onchange="toggleCustomMedInput()" class="w-full border border-gray-300 rounded-lg p-2 text-sm bg-white focus:outline-none focus:border-blue-500 shadow-sm">
-                <!-- سيتم تعبئة الأدوية من الجافاسكربت -->
             </select>
             
             <div class="flex flex-wrap md:flex-nowrap gap-3 mt-2">
@@ -91,7 +89,6 @@
             </div>
         </div>
 
-        <!-- قائمة الأدوية (المستودع) -->
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-100">
@@ -111,17 +108,33 @@
     <!-- ================= 3. التبويب الثالث: الجرعات ومكوناتها ================= -->
     <div id="tab-doses" class="tab-content hidden space-y-6">
         
-        <!-- إضافة موعد جرعة جديد -->
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex gap-3 items-end">
-            <div class="flex-grow">
-                <label class="block text-xs font-bold text-gray-600 mb-1">اسم موعد الجرعة (مثال: الجرعة الصباحية)</label>
-                <input type="text" id="new-dose-name" class="w-full border border-gray-300 rounded-lg p-2 text-sm bg-gray-50">
+        <!-- إضافة موعد جرعة جديد مع تحديد الأيام -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-4">
+            <div class="flex gap-3 items-end">
+                <div class="flex-grow">
+                    <label class="block text-xs font-bold text-gray-600 mb-1">اسم موعد الجرعة (مثال: مكملات الثلاثاء)</label>
+                    <input type="text" id="new-dose-name" class="w-full border border-gray-300 rounded-lg p-2 text-sm bg-gray-50">
+                </div>
+                <div class="w-1/4">
+                    <label class="block text-xs font-bold text-gray-600 mb-1">وقت الجرعة</label>
+                    <input type="time" id="new-dose-time" class="w-full border border-gray-300 rounded-lg p-2 text-sm bg-gray-50">
+                </div>
+                <button onclick="addDoseSchedule()" class="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-blue-700 font-bold transition h-[38px]">إنشاء موعد جديد</button>
             </div>
-            <div class="w-1/3">
-                <label class="block text-xs font-bold text-gray-600 mb-1">وقت الجرعة</label>
-                <input type="time" id="new-dose-time" class="w-full border border-gray-300 rounded-lg p-2 text-sm bg-gray-50">
+            
+            <!-- تحديد أيام الأسبوع -->
+            <div class="bg-blue-50 border border-blue-100 p-3 rounded-lg">
+                <label class="block text-xs font-bold text-blue-800 mb-2">أيام إعطاء الجرعة (الافتراضي: يومياً)</label>
+                <div class="flex flex-wrap gap-4">
+                    <label class="inline-flex items-center"><input type="checkbox" name="dose-days" value="0" checked class="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300"><span class="ml-2 mr-1 text-sm text-gray-700">الأحد</span></label>
+                    <label class="inline-flex items-center"><input type="checkbox" name="dose-days" value="1" checked class="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300"><span class="ml-2 mr-1 text-sm text-gray-700">الإثنين</span></label>
+                    <label class="inline-flex items-center"><input type="checkbox" name="dose-days" value="2" checked class="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300"><span class="ml-2 mr-1 text-sm text-gray-700">الثلاثاء</span></label>
+                    <label class="inline-flex items-center"><input type="checkbox" name="dose-days" value="3" checked class="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300"><span class="ml-2 mr-1 text-sm text-gray-700">الأربعاء</span></label>
+                    <label class="inline-flex items-center"><input type="checkbox" name="dose-days" value="4" checked class="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300"><span class="ml-2 mr-1 text-sm text-gray-700">الخميس</span></label>
+                    <label class="inline-flex items-center"><input type="checkbox" name="dose-days" value="5" checked class="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300"><span class="ml-2 mr-1 text-sm text-gray-700">الجمعة</span></label>
+                    <label class="inline-flex items-center"><input type="checkbox" name="dose-days" value="6" checked class="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300"><span class="ml-2 mr-1 text-sm text-gray-700">السبت</span></label>
+                </div>
             </div>
-            <button onclick="addDoseSchedule()" class="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-blue-700 font-bold transition h-[38px]">إنشاء موعد جديد</button>
         </div>
 
         <!-- قائمة الجرعات ومحتوياتها -->
@@ -130,7 +143,7 @@
         </div>
     </div>
 
-    <!-- ================= 4. التبويب الرابع: التقارير ================= -->
+    <!-- ================= 4. التقارير ================= -->
     <div id="tab-reports" class="tab-content hidden bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-lg font-bold text-gray-800">📊 سجل إعطاء الجرعات (مع ميزة التراجع وإعادة الرصيد)</h2>
@@ -157,8 +170,8 @@
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let globalMedications = [];
+        const dayNames = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 
-        // --- دليل الأدوية الجاهز (حسب المرفق الطبي) ---
         const PREDEFINED_MEDS = [
             { name: "Nexium 40 mg - نيكسيوم", unit: "كبسولة" },
             { name: "Diamicron MR 30 mg - دياميكرون", unit: "حبة" },
@@ -179,7 +192,6 @@
             { name: "Movicol Powder - موفيكول ملين", unit: "ظرف" }
         ];
 
-        // تعبئة قائمة الدليل الذكي عند فتح الصفحة
         function populatePresetMeds() {
             const select = document.getElementById('preset-med');
             select.innerHTML = '<option value="">-- اضغط هنا لاختيار دواء من دليل الوالد --</option>';
@@ -189,7 +201,6 @@
             select.innerHTML += '<option value="custom" class="font-bold text-blue-600">➕ إضافة دواء غير موجود في القائمة (يدوي)</option>';
         }
 
-        // إظهار/إخفاء الحقل اليدوي وتحديث الوحدة التلقائية
         function toggleCustomMedInput() {
             const select = document.getElementById('preset-med');
             const nameInput = document.getElementById('med-name');
@@ -210,7 +221,6 @@
             }
         }
 
-        // التنقل بين التبويبات
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(el => {
@@ -227,7 +237,6 @@
             if(tabId === 'tab-reports') loadReports();
         }
 
-        // ------------------ نظام الدخول ------------------
         async function checkAuth() {
             if (sessionStorage.getItem('isAdminAuthenticated') === 'true') {
                 document.getElementById('login-overlay').classList.add('hidden');
@@ -263,14 +272,13 @@
 
         function logoutAdmin() { sessionStorage.clear(); location.reload(); }
 
-        // ------------------ 1. المسؤولون والملاحظات ------------------
         async function loadCaregivers() {
             const list = document.getElementById('caregivers-list');
             const { data } = await db.from('caregivers').select('*').order('created_at', { ascending: true });
             list.innerHTML = '';
             if(!data) return;
             data.forEach(c => {
-                const badge = c.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800';
+                const badge = c.role === 'admin' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800';
                 list.innerHTML += `
                     <li class="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-100">
                         <div class="flex items-center gap-2"><span class="font-medium text-sm">${c.name}</span><span class="text-[10px] px-2 rounded-full ${badge}">${c.role==='admin'?'مشرف':'عضو'}</span></div>
@@ -290,7 +298,6 @@
         async function loadGlobalNote() { const { data } = await db.from('app_settings').select('value').eq('key', 'global_note').single(); if(data) document.getElementById('global-note').value = data.value === 'لا توجد ملاحظات حالياً' ? '' : data.value; }
         async function saveGlobalNote() { await db.from('app_settings').upsert({ key: 'global_note', value: document.getElementById('global-note').value || 'لا توجد ملاحظات حالياً' }); alert("تم الحفظ!"); }
 
-        // ------------------ 2. مستودع الأدوية ------------------
         async function fetchGlobalMedications() {
             const { data } = await db.from('medications').select('*').order('name');
             globalMedications = data || [];
@@ -353,7 +360,6 @@
             }
         }
 
-        // ------------------ 3. الجرعات ومكوناتها ------------------
         async function loadSchedulesAndCompositions() {
             await fetchGlobalMedications(); 
             const container = document.getElementById('schedules-container');
@@ -373,6 +379,13 @@
                 const activeBtn = sch.is_active ? `<button onclick="toggleDose('${sch.id}', true)" class="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">إيقاف مؤقت</button>` 
                                                 : `<button onclick="toggleDose('${sch.id}', false)" class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">تفعيل</button>`;
                 
+                // عرض الأيام المخصصة
+                let daysDisplay = 'يومياً';
+                if (sch.days_of_week && sch.days_of_week.split(',').length < 7) {
+                    const daysIdx = sch.days_of_week.split(',');
+                    daysDisplay = daysIdx.map(i => dayNames[parseInt(i)]).join('، ');
+                }
+
                 const schMeds = compositions ? compositions.filter(c => c.schedule_id === sch.id) : [];
                 let medsHTML = '';
                 
@@ -393,6 +406,7 @@
                     <div class="flex justify-between items-center mb-4 border-b pb-3">
                         <div>
                             <h3 class="font-bold text-lg text-gray-800">${sch.dose_name} <span class="text-sm font-normal text-gray-500">(${timeStr})</span></h3>
+                            <p class="text-xs font-medium text-blue-600 mt-1">🗓️ ${daysDisplay}</p>
                         </div>
                         <div class="flex gap-2">
                             ${activeBtn}
@@ -419,9 +433,19 @@
         async function addDoseSchedule() {
             const name = document.getElementById('new-dose-name').value;
             const time = document.getElementById('new-dose-time').value;
+            
+            const daysCheckboxes = document.querySelectorAll('input[name="dose-days"]:checked');
+            let daysArray = Array.from(daysCheckboxes).map(cb => cb.value);
+            if(daysArray.length === 0) return alert("الرجاء اختيار يوم واحد على الأقل لإعطاء الجرعة.");
+            const daysStr = daysArray.join(',');
+
             if(!name || !time) return alert("أدخل اسم ووقت الجرعة");
-            await db.from('doses_schedule').insert([{ dose_name: name, scheduled_time: time + ':00' }]);
-            document.getElementById('new-dose-name').value = ''; document.getElementById('new-dose-time').value = '';
+            
+            await db.from('doses_schedule').insert([{ dose_name: name, scheduled_time: time + ':00', days_of_week: daysStr }]);
+            
+            document.getElementById('new-dose-name').value = ''; 
+            document.getElementById('new-dose-time').value = '';
+            document.querySelectorAll('input[name="dose-days"]').forEach(cb => cb.checked = true);
             loadSchedulesAndCompositions();
         }
 
@@ -450,7 +474,6 @@
             loadSchedulesAndCompositions();
         }
 
-        // ------------------ 4. التقارير وإلغاء التسجيل ------------------
         async function loadReports() {
             const tbody = document.getElementById('reports-table-body');
             tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center">جاري التحميل...</td></tr>';
@@ -463,7 +486,6 @@
                 const isTaken = log.status === 'taken';
                 const timeGiven = isTaken && log.given_at ? new Date(log.given_at).toLocaleTimeString('ar-SA', {hour: '2-digit', minute:'2-digit'}) : '-';
                 
-                // زر التراجع
                 const revertBtnHTML = isTaken 
                     ? `<button onclick="revertDose('${log.id}', '${log.schedule_id}')" class="text-xs bg-red-100 hover:bg-red-200 text-red-700 font-bold py-1 px-3 rounded transition shadow-sm border border-red-200">إلغاء وإعادة الرصيد</button>`
                     : `<span class="text-xs text-gray-400">-</span>`;
@@ -482,26 +504,21 @@
             });
         }
 
-        // دالة التراجع القوية (تعيد الأرصدة وتلغي التسجيل)
         async function revertDose(logId, scheduleId) {
             if(!confirm("⚠️ تنبيه هام!\nهل أنت متأكد من إلغاء تسجيل هذه الجرعة؟\n\n- سيتم إعادتها لحالة (بانتظار الموعد).\n- سيتم إرجاع كميات الأدوية المخصومة إلى رصيد المستودع.")) return;
 
-            // 1. جلب مكونات الجرعة لإرجاع الأرصدة
             const { data: doseComps } = await db.from('dose_medications').select('medication_id, quantity').eq('schedule_id', scheduleId);
             
             if (doseComps && doseComps.length > 0) {
                 for (let comp of doseComps) {
-                    // جلب الرصيد الحالي للدواء
                     const { data: medData } = await db.from('medications').select('current_stock').eq('id', comp.medication_id).single();
                     if (medData) {
-                        // إعادة الكمية للرصيد
                         const newStock = medData.current_stock + comp.quantity;
                         await db.from('medications').update({ current_stock: newStock }).eq('id', comp.medication_id);
                     }
                 }
             }
 
-            // 2. تصفير السجل وإعادته لحالة الانتظار
             await db.from('medication_logs')
                 .update({ status: 'pending', given_by: null, given_at: null, note_for_next_dose: null })
                 .eq('id', logId);
@@ -510,7 +527,6 @@
             loadReports();
         }
 
-        // تشغيل التحقق
         checkAuth();
     </script>
 </body>

@@ -16,16 +16,13 @@
             70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
             100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
-        /* تصميم قائمة التحقق (Checklist) */
         .med-checklist li::before { content: '💊'; margin-left: 8px; font-size: 14px; }
-        
-        /* تصميم زر معطل */
         .btn-disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
     </style>
 </head>
 <body class="p-4 md:p-8 max-w-md mx-auto">
 
-    <!-- شاشة الترحيب واختيار المستخدم (تظهر أول مرة فقط) -->
+    <!-- شاشة الترحيب واختيار المستخدم -->
     <div id="welcome-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-80 flex justify-center items-center z-50 hidden">
         <div class="bg-white p-8 rounded-2xl shadow-xl w-11/12 max-w-sm text-center border border-gray-100">
             <h2 class="text-2xl font-bold text-gray-800 mb-2">👋 أهلاً بك</h2>
@@ -42,7 +39,6 @@
         <div>
             <h1 class="text-xl font-bold text-gray-800 mb-1">💊 متابعة أدوية الوالد</h1>
             <p class="text-gray-500 text-xs" id="current-date"></p>
-            <!-- الترحيب بالمستخدم -->
             <div id="user-greeting-container" class="hidden mt-2 flex items-center gap-2 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg w-fit">
                 <span id="user-greeting" class="text-blue-800 font-bold text-sm"></span>
                 <button onclick="changeCaregiver()" class="text-[11px] text-gray-500 underline hover:text-gray-800 mr-2 border-r border-blue-200 pr-2">تغيير</button>
@@ -61,7 +57,6 @@
         <button onclick="goToToday()" class="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold hover:bg-blue-100 transition">
             العودة لليوم
         </button>
-        <!-- تمت إضافة الآي دي هنا للتحكم بتعطيل الزر -->
         <button id="btn-next-day" onclick="changeDate(1)" class="px-3 py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg text-sm font-bold border border-gray-200 transition">
             اليوم التالي ◀️
         </button>
@@ -93,7 +88,6 @@
         function updateDateDisplay() {
             document.getElementById('current-date').textContent = viewedDate.toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
             
-            // --- حماية التنقل للمستقبل ---
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             
@@ -102,7 +96,6 @@
             
             const btnNext = document.getElementById('btn-next-day');
             
-            // إذا كان تاريخ العرض مساوياً لليوم الحالي (أو أكبر)، عطل زر "اليوم التالي"
             if (viewDay.getTime() >= today.getTime()) {
                 btnNext.classList.add('btn-disabled');
             } else {
@@ -198,9 +191,18 @@
             if (!localStorage.getItem('caregiverId')) return;
 
             const offset = viewedDate.getTimezoneOffset();
-            const today = new Date(viewedDate.getTime() - (offset*60*1000)).toISOString().split('T')[0];
+            const todayStr = new Date(viewedDate.getTime() - (offset*60*1000)).toISOString().split('T')[0];
+            const currentDayNum = viewedDate.getDay().toString(); // الحصول على رقم اليوم (0 = الأحد، الخ)
 
-            const { data: schedules } = await db.from('doses_schedule').select('*').eq('is_active', true).order('scheduled_time', { ascending: true });
+            let { data: schedules } = await db.from('doses_schedule').select('*').eq('is_active', true).order('scheduled_time', { ascending: true });
+            
+            // فلترة الجرعات لتظهر فقط الجرعات المخصصة لليوم الذي يتصفحه العضو
+            if (schedules) {
+                schedules = schedules.filter(sch => {
+                    if (!sch.days_of_week) return true; // التوافق مع الجرعات القديمة التي ليس لها أيام محددة
+                    return sch.days_of_week.split(',').includes(currentDayNum);
+                });
+            }
             activeSchedules = schedules || [];
 
             const { data: comps } = await db.from('dose_medications').select(`
@@ -210,7 +212,7 @@
             `);
             doseCompositions = comps || [];
 
-            const { data: logs } = await db.from('medication_logs').select('*, caregivers(name)').eq('dose_date', today);
+            const { data: logs } = await db.from('medication_logs').select('*, caregivers(name)').eq('dose_date', todayStr);
 
             for (let sch of activeSchedules) {
                 let log = logs?.find(l => l.schedule_id === sch.id);
@@ -220,7 +222,7 @@
                         dose_type: sch.dose_name,
                         scheduled_time: sch.scheduled_time.substring(0,5),
                         status: 'pending',
-                        dose_date: today
+                        dose_date: todayStr
                     };
                     const { data: inserted } = await db.from('medication_logs').insert([newLog]).select('*, caregivers(name)').single();
                     if(inserted) todayLogs[sch.id] = inserted;
@@ -238,7 +240,7 @@
             container.innerHTML = '';
 
             if (activeSchedules.length === 0) {
-                container.innerHTML = '<div class="text-center text-gray-500 py-8 bg-white rounded-xl shadow-sm border border-gray-100">لا توجد جرعات مجدولة لليوم. تأكد من إضافتها وتفعيلها من لوحة الإدارة.</div>';
+                container.innerHTML = '<div class="text-center text-gray-500 py-8 bg-white rounded-xl shadow-sm border border-gray-100">لا توجد جرعات مجدولة لهذا اليوم. الوالد في راحة من الأدوية الآن 🌿</div>';
                 return;
             }
 
@@ -340,7 +342,6 @@
         }
 
         async function recordDose(schId) {
-            // --- الحماية البرمجية المزدوجة (تأكيد منع تسجيل جرعات مستقبلية) ---
             const offset = viewedDate.getTimezoneOffset();
             const viewDateString = new Date(viewedDate.getTime() - (offset*60*1000)).toISOString().split('T')[0];
             const todayString = new Date(new Date().getTime() - (offset*60*1000)).toISOString().split('T')[0];
@@ -394,7 +395,6 @@
                 }
             }
 
-            // --- تنسيق التاريخ والوقت للواتساب ---
             const dateStr = now.toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
             const timeStr = now.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
             
